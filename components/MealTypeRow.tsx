@@ -23,12 +23,12 @@ export function MealTypeRow({
   return (
     <section className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold">{label}</h2>
+        <h2 className="font-display text-xl font-semibold text-stone-900">{label}</h2>
         <Link
           href={`/search?mealType=${mealTypeSlug}`}
-          className="text-sm font-medium text-amber-700 hover:underline"
+          className="rounded-full border border-amber-200 px-3 py-1 text-sm font-medium text-amber-700 transition hover:bg-amber-50"
         >
-          See all
+          See all →
         </Link>
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2">

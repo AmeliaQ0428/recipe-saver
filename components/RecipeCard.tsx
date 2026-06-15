@@ -12,25 +12,31 @@ export function RecipeCard({ recipe }: { recipe: RecipeCardData }) {
   return (
     <Link
       href={`/recipe/${recipe.id}`}
-      className="block overflow-hidden rounded-xl border border-black/10 bg-white transition hover:shadow-md"
+      className="group block overflow-hidden rounded-2xl border border-stone-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"
     >
-      <div className="relative h-36 w-full bg-black/5">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-stone-100">
         {recipe.image_url ? (
           <Image
             src={recipe.image_url}
             alt={recipe.title}
             fill
             sizes="224px"
-            className="object-cover"
+            className="object-cover transition duration-300 group-hover:scale-105"
           />
+        ) : null}
+        {recipe.spoonacular_score !== null ? (
+          <div className="absolute right-2 top-2">
+            <RatingBadge score={recipe.spoonacular_score} overlay />
+          </div>
         ) : null}
       </div>
       <div className="space-y-1 p-3">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug">{recipe.title}</h3>
-        <div className="flex items-center gap-2 text-xs text-black/60">
-          <RatingBadge score={recipe.spoonacular_score} />
-          {recipe.ready_in_minutes ? <span>{recipe.ready_in_minutes} min</span> : null}
-        </div>
+        <h3 className="font-display line-clamp-2 text-sm font-semibold leading-snug text-stone-900">
+          {recipe.title}
+        </h3>
+        {recipe.ready_in_minutes ? (
+          <p className="text-xs text-stone-500">{recipe.ready_in_minutes} min</p>
+        ) : null}
       </div>
     </Link>
   );

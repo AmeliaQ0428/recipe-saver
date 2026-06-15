@@ -37,12 +37,17 @@ No coding is required from you — just clicking through sign-up forms and copyi
 1. Go to **supabase.com** and sign up (free), then click **New project**.
 2. Pick any name (e.g. `recipe-saver`) and set a database password — just store it somewhere safe, you likely won't need it again.
 3. Wait a minute or two for the project to finish setting up.
-4. **Run the database setup script:**
+4. **Run the database setup scripts:**
    - In the left sidebar, click the **SQL Editor** icon.
    - Click **New query**.
    - I'll give you a block of text (the contents of `supabase/migrations/0001_init.sql`) — paste it into the editor and click **Run**.
    - This creates all the tables the website needs (recipes, cuisines, steps, etc.) and pre-fills the cuisine and meal-type lists.
-5. **Copy your project's keys:**
+   - Click **New query** again, paste in the contents of `supabase/migrations/0002_auth_and_notes.sql`, and click **Run**. This adds login support and the "favourites/notes" tables.
+5. **Set the Site URL (for login emails):**
+   - In the left sidebar, go to **Authentication** → **URL Configuration**.
+   - Set **Site URL** to your website's address (you'll get this in Step 4 below — come back and update this once you have it). This makes sure the "confirm your email" link people get when signing up points to the right place.
+   - When someone signs up, Supabase automatically emails them a confirmation link — that's normal, just have them click it before logging in.
+6. **Copy your project's keys:**
    - In the left sidebar, go to **Project Settings** (gear icon) → **API**.
    - You'll see three values — copy each one and send them to me (or paste them directly into the `.env.local` file / Vercel later, see Step 5):
      - **Project URL** → this is `NEXT_PUBLIC_SUPABASE_URL`
@@ -102,7 +107,10 @@ From now on, Vercel automatically re-runs this every day to keep recipes fresh �
 ## After setup — what you can do
 
 - Share the `https://YOUR-SITE.vercel.app` link with anyone to let them browse recipes.
-- Use the **Browse** page to filter by cuisine (Thai, Chinese, Mexican, etc.), meal type, and sort by rating or time.
+- Use the **Browse** page to search by name, filter by cuisine (Thai, Chinese, Mexican, etc.), meal type, and sort by rating or time.
 - Click any recipe to see its rating, ingredients, and step-by-step instructions.
+- **Sign up** (top right) to save recipes to **My Cookbook** and keep your own notes on any recipe (substitutions, timing tweaks, etc.) — each person who signs up gets their own list.
 
-This is **Phase 1** of the site (browsing only). Once you're happy with it, the next phases add: logging in with email, recording your own recipes step-by-step with your own photos, and liking/commenting/saving recipes.
+Remember to go back to **Authentication → URL Configuration → Site URL** in Supabase once your site is deployed (Step 4) and set it to your live Vercel URL, so sign-up confirmation emails link to the right place.
+
+This covers browsing, search, login, favourites, and personal notes. A future phase could add recording your own recipes step-by-step with your own photos, and liking/commenting on recipes.

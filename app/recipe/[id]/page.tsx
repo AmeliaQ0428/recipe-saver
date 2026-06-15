@@ -2,13 +2,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getRecipeInformation } from "@/lib/spoonacular";
+import { upsertRecipeSteps } from "@/lib/cache";
 import { RatingBadge } from "@/components/RatingBadge";
 import { StepCard } from "@/components/StepCard";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { RecipeNotes } from "@/components/RecipeNotes";
 import type { CachedRecipe, CachedRecipeStep } from "@/lib/types";
 
 type RecipeDetailData = Pick<
   CachedRecipe,
   | "id"
+  | "spoonacular_id"
   | "title"
   | "image_url"
   | "source_url"
@@ -31,7 +37,7 @@ export default async function RecipeDetailPage({
   const { data: recipe } = await supabase
     .from("cached_recipes")
     .select(
-      "id, title, image_url, source_url, ready_in_minutes, servings, spoonacular_score, cuisines, meal_types_raw"
+      "id, spoonacular_id, title, image_url, source_url, ready_in_minutes, servings, spoonacular_score, cuisines, meal_types_raw"
     )
     .eq("id", recipeId)
     .maybeSingle()
@@ -41,12 +47,58 @@ export default async function RecipeDetailPage({
     notFound();
   }
 
-  const { data: steps } = await supabase
+  let { data: steps } = await supabase
     .from("cached_recipe_steps")
     .select("id, cached_recipe_id, step_number, description, image_url, ingredient_images")
     .eq("cached_recipe_id", recipeId)
     .order("step_number")
     .returns<CachedRecipeStep[]>();
+
+  // Newly-discovered recipes (from a live search) often don't have cached
+  // steps yet - try to fetch them once, falling back quietly if it fails
+  // (e.g. daily Spoonacular quota reached).
+  if ((!steps || steps.length === 0) && recipe.spoonacular_id) {
+    try {
+      const admin = createAdminClient();
+      const info = await getRecipeInformation(recipe.spoonacular_id);
+      await upsertRecipeSteps(admin, recipeId, info);
+
+      const { data: freshSteps } = await supabase
+        .from("cached_recipe_steps")
+        .select("id, cached_recipe_id, step_number, description, image_url, ingredient_images")
+        .eq("cached_recipe_id", recipeId)
+        .order("step_number")
+        .returns<CachedRecipeStep[]>();
+      steps = freshSteps;
+    } catch {
+      // Leave steps empty - the page shows the "not cached yet" message below.
+    }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let initialSaved = false;
+  let initialNotes = "";
+
+  if (user) {
+    const { data: saveRow } = await supabase
+      .from("recipe_saves")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("cached_recipe_id", recipeId)
+      .maybeSingle();
+    initialSaved = !!saveRow;
+
+    const { data: noteRow } = await supabase
+      .from("recipe_notes")
+      .select("notes")
+      .eq("user_id", user.id)
+      .eq("cached_recipe_id", recipeId)
+      .maybeSingle();
+    initialNotes = noteRow?.notes ?? "";
+  }
 
   const badges = [...recipe.cuisines, ...recipe.meal_types_raw];
 
@@ -54,7 +106,7 @@ export default async function RecipeDetailPage({
     <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
       <div className="space-y-4">
         {recipe.image_url ? (
-          <div className="relative h-64 w-full overflow-hidden rounded-xl bg-black/5 sm:h-80">
+          <div className="relative h-64 w-full overflow-hidden rounded-3xl bg-stone-100 sm:h-96">
             <Image
               src={recipe.image_url}
               alt={recipe.title}
@@ -63,16 +115,27 @@ export default async function RecipeDetailPage({
               className="object-cover"
               priority
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+            <h1 className="font-display absolute bottom-4 left-4 right-4 text-2xl font-bold text-white drop-shadow sm:text-4xl">
+              {recipe.title}
+            </h1>
           </div>
-        ) : null}
+        ) : (
+          <h1 className="font-display text-2xl font-bold text-stone-900 sm:text-4xl">
+            {recipe.title}
+          </h1>
+        )}
 
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold">{recipe.title}</h1>
-
-          <div className="flex flex-wrap items-center gap-2 text-sm text-black/60">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600">
             <RatingBadge score={recipe.spoonacular_score} />
             {recipe.ready_in_minutes ? <span>{recipe.ready_in_minutes} min</span> : null}
             {recipe.servings ? <span>Serves {recipe.servings}</span> : null}
+            <FavoriteButton
+              cachedRecipeId={recipe.id}
+              initialSaved={initialSaved}
+              isLoggedIn={!!user}
+            />
           </div>
 
           {badges.length > 0 ? (
@@ -80,7 +143,7 @@ export default async function RecipeDetailPage({
               {badges.map((badge) => (
                 <span
                   key={badge}
-                  className="rounded-full bg-black/5 px-2 py-0.5 text-xs font-medium capitalize text-black/70"
+                  className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium capitalize text-amber-800"
                 >
                   {badge}
                 </span>
@@ -105,7 +168,7 @@ export default async function RecipeDetailPage({
 
       {steps && steps.length > 0 ? (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Steps</h2>
+          <h2 className="font-display text-lg font-semibold text-stone-900">Steps</h2>
           <ol className="space-y-3">
             {steps.map((step) => (
               <StepCard key={step.id} step={step} />
@@ -113,11 +176,13 @@ export default async function RecipeDetailPage({
           </ol>
         </div>
       ) : (
-        <p className="text-black/60">
+        <p className="text-stone-500">
           Step-by-step instructions aren&apos;t cached for this recipe yet — check the original
           recipe link above.
         </p>
       )}
+
+      <RecipeNotes cachedRecipeId={recipe.id} initialNotes={initialNotes} isLoggedIn={!!user} />
     </main>
   );
 }

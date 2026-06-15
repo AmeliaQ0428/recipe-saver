@@ -20,6 +20,7 @@ function apiKey() {
 export async function searchRecipes(params: {
   type?: string;
   cuisine?: string;
+  query?: string;
   sort?: string;
   number?: number;
 }): Promise<SpoonacularComplexSearchResponse> {
@@ -31,6 +32,7 @@ export async function searchRecipes(params: {
   });
   if (params.type) search.set("type", params.type);
   if (params.cuisine) search.set("cuisine", params.cuisine);
+  if (params.query) search.set("query", params.query);
 
   const res = await fetch(`${BASE_URL}/recipes/complexSearch?${search.toString()}`);
   if (!res.ok) {
