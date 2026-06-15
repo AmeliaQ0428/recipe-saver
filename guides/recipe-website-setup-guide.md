@@ -59,7 +59,7 @@ No coding is required from you — just clicking through sign-up forms and copyi
 2. Once signed in, find your **API key** on your profile/dashboard page.
 3. Copy it — this is your `SPOONACULAR_API_KEY`.
 
-The free plan gives 150 requests per day, which is more than enough — the site automatically checks recipe data once a day and stores it, so visitors never trigger extra requests.
+The free plan gives a 50-point daily quota (each search/recipe call uses roughly 1 point). The daily cache-refresh job is tuned to stay within this, so visitors never trigger extra requests. The quota resets once a day — if you ever see a "daily points limit" error, it'll clear itself within 24 hours.
 
 ---
 

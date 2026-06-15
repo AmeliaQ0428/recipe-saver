@@ -18,10 +18,12 @@ export const maxDuration = 60;
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-// Spoonacular's free plan allows 150 requests/day. This route runs once a
-// day and stays well under that: ~12 search calls (4 meal-type groups + 8
-// cuisines) plus up to STEP_FETCH_BUDGET recipe-information calls.
-const STEP_FETCH_BUDGET = 40;
+// Spoonacular's free plan is actually a 50-point/day quota (confirmed via a
+// 402 response), not 150 raw requests. Cost is ~1 point/request plus
+// ~0.01 point per result. The 12 search calls (4 meal-type groups + 8
+// cuisines, ~10 results each) cost ~13 points, leaving headroom for
+// STEP_FETCH_BUDGET recipe-information calls (~1 point each) with a buffer.
+const STEP_FETCH_BUDGET = 25;
 
 async function recipeHasSteps(admin: AdminClient, cachedRecipeId: number): Promise<boolean> {
   const { count, error } = await admin
