@@ -50,7 +50,7 @@ export default async function RecipeDetailPage({
 
   let { data: steps } = await supabase
     .from("cached_recipe_steps")
-    .select("id, cached_recipe_id, step_number, description, image_url, ingredient_images")
+    .select("id, cached_recipe_id, step_number, description, image_url, step_ingredients")
     .eq("cached_recipe_id", recipeId)
     .order("step_number")
     .returns<CachedRecipeStep[]>();
@@ -75,7 +75,7 @@ export default async function RecipeDetailPage({
 
       const { data: freshSteps } = await supabase
         .from("cached_recipe_steps")
-        .select("id, cached_recipe_id, step_number, description, image_url, ingredient_images")
+        .select("id, cached_recipe_id, step_number, description, image_url, step_ingredients")
         .eq("cached_recipe_id", recipeId)
         .order("step_number")
         .returns<CachedRecipeStep[]>();

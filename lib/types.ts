@@ -25,13 +25,19 @@ export type CachedRecipe = {
   meal_types_raw: string[];
 };
 
+export type StepIngredient = {
+  name: string;
+  amount: number | null;
+  unit: string | null;
+};
+
 export type CachedRecipeStep = {
   id: number;
   cached_recipe_id: number;
   step_number: number;
   description: string;
   image_url: string | null;
-  ingredient_images: string[];
+  step_ingredients: StepIngredient[];
 };
 
 export type CachedRecipeIngredient = {

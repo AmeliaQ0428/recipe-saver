@@ -44,6 +44,7 @@ No coding is required from you — just clicking through sign-up forms and copyi
    - This creates all the tables the website needs (recipes, cuisines, steps, etc.) and pre-fills the cuisine and meal-type lists.
    - Click **New query** again, paste in the contents of `supabase/migrations/0002_auth_and_notes.sql`, and click **Run**. This adds login support and the "favourites/notes" tables.
    - Click **New query** once more, paste in the contents of `supabase/migrations/0003_recipe_ingredients.sql`, and click **Run**. This adds the table that stores ingredient quantities for each recipe.
+   - Click **New query** one more time, paste in the contents of `supabase/migrations/0004_step_ingredients.sql`, and click **Run**. This adds a column that stores the ingredient list (with quantities) shown under each step.
 5. **Set the Site URL (for login emails):**
    - In the left sidebar, go to **Authentication** → **URL Configuration**.
    - Set **Site URL** to your website's address (you'll get this in Step 4 below — come back and update this once you have it). This makes sure the "confirm your email" link people get when signing up points to the right place.

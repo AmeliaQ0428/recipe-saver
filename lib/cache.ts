@@ -1,9 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SpoonacularRecipeInformation, SpoonacularSearchResult } from "./types";
 
-const INGREDIENT_IMAGE_BASE = "https://img.spoonacular.com/ingredients_100x100/";
-const EQUIPMENT_IMAGE_BASE = "https://img.spoonacular.com/equipment_100x100/";
-
 export type TaxonomyMaps = {
   /** lowercase cuisine label -> cuisines.id */
   cuisineByLabel: Map<string, number>;
@@ -127,8 +124,9 @@ export async function syncTaxonomyJoins(
 
 /**
  * Upsert step-by-step instructions for a recipe. Since Spoonacular has no
- * per-step photos, each step is given the recipe's main image plus a strip
- * of ingredient/equipment icons relevant to that step.
+ * per-step photos, each step is given the recipe's main image. Each step's
+ * ingredients are matched against `extendedIngredients` (by Spoonacular
+ * ingredient id) to attach a metric quantity where available.
  */
 export async function upsertRecipeSteps(
   admin: SupabaseClient,
@@ -138,22 +136,31 @@ export async function upsertRecipeSteps(
   const steps = info.analyzedInstructions?.[0]?.steps ?? [];
   if (steps.length === 0) return;
 
+  const measureById = new Map<number, { amount: number | null; unit: string | null }>();
+  for (const ingredient of info.extendedIngredients ?? []) {
+    const metric = ingredient.measures?.metric;
+    measureById.set(ingredient.id, {
+      amount: metric?.amount ?? ingredient.amount ?? null,
+      unit: metric?.unitShort ?? ingredient.unit ?? null,
+    });
+  }
+
   const rows = steps.map((step) => {
-    const ingredientImages = (step.ingredients ?? [])
-      .map((i) => i.image)
-      .filter(Boolean)
-      .map((img) => `${INGREDIENT_IMAGE_BASE}${img}`);
-    const equipmentImages = (step.equipment ?? [])
-      .map((e) => e.image)
-      .filter(Boolean)
-      .map((img) => `${EQUIPMENT_IMAGE_BASE}${img}`);
+    const stepIngredients = (step.ingredients ?? []).map((ingredient) => {
+      const measure = measureById.get(ingredient.id);
+      return {
+        name: ingredient.name,
+        amount: measure?.amount ?? null,
+        unit: measure?.unit ?? null,
+      };
+    });
 
     return {
       cached_recipe_id: cachedRecipeId,
       step_number: step.number,
       description: step.step,
       image_url: info.image ?? null,
-      ingredient_images: [...ingredientImages, ...equipmentImages],
+      step_ingredients: stepIngredients,
     };
   });
 

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { CachedRecipeStep } from "@/lib/types";
+import { formatAmount } from "@/lib/format";
 
 export function StepCard({ step }: { step: CachedRecipeStep }) {
   return (
@@ -23,17 +24,24 @@ export function StepCard({ step }: { step: CachedRecipeStep }) {
 
       <div className="flex-1 space-y-2">
         <p className="text-sm leading-relaxed text-stone-700">{step.description}</p>
-        {step.ingredient_images.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {step.ingredient_images.map((src, index) => (
-              <div
-                key={`${src}-${index}`}
-                className="relative h-10 w-10 overflow-hidden rounded-md bg-stone-100"
-              >
-                <Image src={src} alt="" fill sizes="40px" className="object-cover" />
-              </div>
+        {step.step_ingredients.length > 0 ? (
+          <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-stone-500">
+            {step.step_ingredients.map((ingredient, index) => (
+              <li key={`${ingredient.name}-${index}`}>
+                {ingredient.amount && ingredient.amount > 0 ? (
+                  <>
+                    <span className="font-medium text-stone-700">
+                      {formatAmount(ingredient.amount)}
+                      {ingredient.unit ? ` ${ingredient.unit}` : ""}
+                    </span>{" "}
+                    {ingredient.name}
+                  </>
+                ) : (
+                  ingredient.name
+                )}
+              </li>
             ))}
-          </div>
+          </ul>
         ) : null}
       </div>
     </li>
