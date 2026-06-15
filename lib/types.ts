@@ -34,6 +34,16 @@ export type CachedRecipeStep = {
   ingredient_images: string[];
 };
 
+export type CachedRecipeIngredient = {
+  id: number;
+  cached_recipe_id: number;
+  sort_order: number;
+  name: string;
+  amount: number | null;
+  unit: string | null;
+  original: string;
+};
+
 export type CachedRecipeDetail = CachedRecipe & {
   summary: string | null;
   steps: CachedRecipeStep[];
@@ -68,5 +78,16 @@ export type SpoonacularRecipeInformation = SpoonacularSearchResult & {
       ingredients?: { id: number; name: string; image: string }[];
       equipment?: { id: number; name: string; image: string }[];
     }[];
+  }[];
+  extendedIngredients?: {
+    id: number;
+    name: string;
+    original: string;
+    amount: number;
+    unit: string;
+    measures?: {
+      metric?: { amount: number; unitShort: string; unitLong: string };
+      us?: { amount: number; unitShort: string; unitLong: string };
+    };
   }[];
 };

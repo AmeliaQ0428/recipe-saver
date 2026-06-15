@@ -30,7 +30,7 @@ export default async function HomePage() {
         .eq("meal_type_id", mealType.id)
         .eq("source", "spoonacular_popular")
         .order("rank")
-        .limit(10)
+        .limit(5)
         .returns<TrendingRow[]>();
 
       const recipes = (data ?? [])

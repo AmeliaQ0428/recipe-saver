@@ -6,6 +6,7 @@ import {
   rebuildTrending,
   syncTaxonomyJoins,
   upsertCachedRecipe,
+  upsertRecipeIngredients,
   upsertRecipeSteps,
   type TaxonomyMaps,
 } from "@/lib/cache";
@@ -51,6 +52,7 @@ async function processRecipe(
       const info = await getRecipeInformation(recipe.id);
       stats.requestsUsed += 1;
       await upsertRecipeSteps(admin, cachedId, info);
+      await upsertRecipeIngredients(admin, cachedId, info);
       stats.stepsFetched += 1;
     }
   }

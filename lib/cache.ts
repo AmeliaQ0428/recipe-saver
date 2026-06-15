@@ -164,6 +164,39 @@ export async function upsertRecipeSteps(
   if (error) throw error;
 }
 
+/**
+ * Upsert a recipe's ingredient list, preferring Spoonacular's metric measure
+ * (grams/ml/etc.) so quantities can be scaled by servings. Falls back to the
+ * default amount/unit, with `original` kept for ingredients with no usable
+ * amount (e.g. "salt to taste").
+ */
+export async function upsertRecipeIngredients(
+  admin: SupabaseClient,
+  cachedRecipeId: number,
+  info: SpoonacularRecipeInformation
+) {
+  const ingredients = info.extendedIngredients ?? [];
+  if (ingredients.length === 0) return;
+
+  const rows = ingredients.map((ingredient, index) => {
+    const metric = ingredient.measures?.metric;
+    return {
+      cached_recipe_id: cachedRecipeId,
+      sort_order: index,
+      name: ingredient.name,
+      amount: metric?.amount ?? ingredient.amount ?? null,
+      unit: metric?.unitShort ?? ingredient.unit ?? null,
+      original: ingredient.original,
+    };
+  });
+
+  const { error } = await admin
+    .from("cached_recipe_ingredients")
+    .upsert(rows, { onConflict: "cached_recipe_id,sort_order" });
+
+  if (error) throw error;
+}
+
 /** Replace the ranked trending list for a meal type with a new ordered set of recipes. */
 export async function rebuildTrending(
   admin: SupabaseClient,

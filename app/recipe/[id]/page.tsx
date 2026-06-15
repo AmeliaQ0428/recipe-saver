@@ -4,12 +4,13 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRecipeInformation } from "@/lib/spoonacular";
-import { upsertRecipeSteps } from "@/lib/cache";
+import { upsertRecipeIngredients, upsertRecipeSteps } from "@/lib/cache";
 import { RatingBadge } from "@/components/RatingBadge";
 import { StepCard } from "@/components/StepCard";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { RecipeNotes } from "@/components/RecipeNotes";
-import type { CachedRecipe, CachedRecipeStep } from "@/lib/types";
+import { IngredientsList } from "@/components/IngredientsList";
+import type { CachedRecipe, CachedRecipeIngredient, CachedRecipeStep } from "@/lib/types";
 
 type RecipeDetailData = Pick<
   CachedRecipe,
@@ -54,14 +55,23 @@ export default async function RecipeDetailPage({
     .order("step_number")
     .returns<CachedRecipeStep[]>();
 
-  // Newly-discovered recipes (from a live search) often don't have cached
-  // steps yet - try to fetch them once, falling back quietly if it fails
-  // (e.g. daily Spoonacular quota reached).
-  if ((!steps || steps.length === 0) && recipe.spoonacular_id) {
+  let { data: ingredients } = await supabase
+    .from("cached_recipe_ingredients")
+    .select("id, cached_recipe_id, sort_order, name, amount, unit, original")
+    .eq("cached_recipe_id", recipeId)
+    .order("sort_order")
+    .returns<CachedRecipeIngredient[]>();
+
+  // Newly-discovered recipes (from a live search) - or recipes cached before
+  // ingredients were tracked - often don't have steps/ingredients yet. Try to
+  // fetch them once, falling back quietly if it fails (e.g. daily Spoonacular
+  // quota reached).
+  if ((!steps || steps.length === 0 || !ingredients || ingredients.length === 0) && recipe.spoonacular_id) {
     try {
       const admin = createAdminClient();
       const info = await getRecipeInformation(recipe.spoonacular_id);
       await upsertRecipeSteps(admin, recipeId, info);
+      await upsertRecipeIngredients(admin, recipeId, info);
 
       const { data: freshSteps } = await supabase
         .from("cached_recipe_steps")
@@ -70,8 +80,16 @@ export default async function RecipeDetailPage({
         .order("step_number")
         .returns<CachedRecipeStep[]>();
       steps = freshSteps;
+
+      const { data: freshIngredients } = await supabase
+        .from("cached_recipe_ingredients")
+        .select("id, cached_recipe_id, sort_order, name, amount, unit, original")
+        .eq("cached_recipe_id", recipeId)
+        .order("sort_order")
+        .returns<CachedRecipeIngredient[]>();
+      ingredients = freshIngredients;
     } catch {
-      // Leave steps empty - the page shows the "not cached yet" message below.
+      // Leave steps/ingredients empty - the page shows the "not cached yet" message below.
     }
   }
 
@@ -165,6 +183,8 @@ export default async function RecipeDetailPage({
           ) : null}
         </div>
       </div>
+
+      <IngredientsList ingredients={ingredients ?? []} baseServings={recipe.servings} />
 
       {steps && steps.length > 0 ? (
         <div className="space-y-3">

@@ -43,6 +43,7 @@ No coding is required from you — just clicking through sign-up forms and copyi
    - I'll give you a block of text (the contents of `supabase/migrations/0001_init.sql`) — paste it into the editor and click **Run**.
    - This creates all the tables the website needs (recipes, cuisines, steps, etc.) and pre-fills the cuisine and meal-type lists.
    - Click **New query** again, paste in the contents of `supabase/migrations/0002_auth_and_notes.sql`, and click **Run**. This adds login support and the "favourites/notes" tables.
+   - Click **New query** once more, paste in the contents of `supabase/migrations/0003_recipe_ingredients.sql`, and click **Run**. This adds the table that stores ingredient quantities for each recipe.
 5. **Set the Site URL (for login emails):**
    - In the left sidebar, go to **Authentication** → **URL Configuration**.
    - Set **Site URL** to your website's address (you'll get this in Step 4 below — come back and update this once you have it). This makes sure the "confirm your email" link people get when signing up points to the right place.
@@ -51,10 +52,10 @@ No coding is required from you — just clicking through sign-up forms and copyi
    - In the left sidebar, go to **Project Settings** (gear icon) → **API**.
    - You'll see three values — copy each one and send them to me (or paste them directly into the `.env.local` file / Vercel later, see Step 5):
      - **Project URL** → this is `NEXT_PUBLIC_SUPABASE_URL`
-     - **anon public** key → this is `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-     - **service_role** key (click "Reveal") → this is `SUPABASE_SERVICE_ROLE_KEY`
+     - **Publishable key** (starts with `sb_publishable_...` — older projects may instead call this "anon public") → this is `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+     - **Secret key** (starts with `sb_secret_...` — older projects may instead call this "service_role"; click "Reveal") → this is `SUPABASE_SERVICE_ROLE_KEY`
 
-   ⚠️ The `service_role` key is powerful — treat it like a password. Don't share it publicly or post it anywhere public.
+   ⚠️ The secret/`service_role` key is powerful — treat it like a password. Don't share it publicly or post it anywhere public.
 
 ---
 
