@@ -12,6 +12,10 @@ import {
 import { CRON_PRIORITY_CUISINES } from "@/lib/constants";
 import type { SpoonacularSearchResult } from "@/lib/types";
 
+// This route makes ~50 sequential external API calls, which can take longer
+// than the platform default. 60s is the max allowed on Vercel's Hobby plan.
+export const maxDuration = 60;
+
 type AdminClient = ReturnType<typeof createAdminClient>;
 
 // Spoonacular's free plan allows 150 requests/day. This route runs once a
@@ -64,56 +68,64 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const admin = createAdminClient();
-  const taxonomy = await loadTaxonomyMaps(admin);
+  try {
+    const admin = createAdminClient();
+    const taxonomy = await loadTaxonomyMaps(admin);
 
-  const { data: mealTypeRows, error: mealTypeError } = await admin
-    .from("meal_types")
-    .select("id, spoonacular_type");
-  if (mealTypeError) {
-    return NextResponse.json({ error: mealTypeError.message }, { status: 500 });
-  }
+    const { data: mealTypeRows, error: mealTypeError } = await admin
+      .from("meal_types")
+      .select("id, spoonacular_type");
+    if (mealTypeError) {
+      return NextResponse.json({ error: mealTypeError.message }, { status: 500 });
+    }
 
-  const stats = { recipesUpserted: 0, stepsFetched: 0, requestsUsed: 0, trendingRows: 0 };
+    const stats = { recipesUpserted: 0, stepsFetched: 0, requestsUsed: 0, trendingRows: 0 };
 
-  // Group meal types sharing a Spoonacular dish type (lunch/dinner both map
-  // to "main course") so they're fetched in a single call and split between
-  // the two trending rows, instead of duplicating the same query twice.
-  const groups = new Map<string, { id: number }[]>();
-  for (const mealType of mealTypeRows ?? []) {
-    const key = mealType.spoonacular_type;
-    const group = groups.get(key) ?? [];
-    group.push({ id: mealType.id });
-    groups.set(key, group);
-  }
+    // Group meal types sharing a Spoonacular dish type (lunch/dinner both map
+    // to "main course") so they're fetched in a single call and split between
+    // the two trending rows, instead of duplicating the same query twice.
+    const groups = new Map<string, { id: number }[]>();
+    for (const mealType of mealTypeRows ?? []) {
+      const key = mealType.spoonacular_type;
+      const group = groups.get(key) ?? [];
+      group.push({ id: mealType.id });
+      groups.set(key, group);
+    }
 
-  for (const [spoonacularType, mealTypesInGroup] of groups) {
-    const { results } = await searchRecipes({
-      type: spoonacularType,
-      sort: "popularity",
-      number: 10 * mealTypesInGroup.length,
-    });
-    stats.requestsUsed += 1;
+    for (const [spoonacularType, mealTypesInGroup] of groups) {
+      const { results } = await searchRecipes({
+        type: spoonacularType,
+        sort: "popularity",
+        number: 10 * mealTypesInGroup.length,
+      });
+      stats.requestsUsed += 1;
 
-    for (let i = 0; i < mealTypesInGroup.length; i++) {
-      const slice = results.slice(i * 10, (i + 1) * 10);
-      const cachedIds: number[] = [];
-      for (const recipe of slice) {
-        cachedIds.push(await processRecipe(admin, taxonomy, recipe, stats));
+      for (let i = 0; i < mealTypesInGroup.length; i++) {
+        const slice = results.slice(i * 10, (i + 1) * 10);
+        const cachedIds: number[] = [];
+        for (const recipe of slice) {
+          cachedIds.push(await processRecipe(admin, taxonomy, recipe, stats));
+        }
+        await rebuildTrending(admin, mealTypesInGroup[i].id, cachedIds);
+        stats.trendingRows += cachedIds.length;
       }
-      await rebuildTrending(admin, mealTypesInGroup[i].id, cachedIds);
-      stats.trendingRows += cachedIds.length;
     }
-  }
 
-  for (const cuisineSlug of CRON_PRIORITY_CUISINES) {
-    const { results } = await searchRecipes({ cuisine: cuisineSlug, sort: "popularity", number: 10 });
-    stats.requestsUsed += 1;
+    for (const cuisineSlug of CRON_PRIORITY_CUISINES) {
+      const { results } = await searchRecipes({ cuisine: cuisineSlug, sort: "popularity", number: 10 });
+      stats.requestsUsed += 1;
 
-    for (const recipe of results) {
-      await processRecipe(admin, taxonomy, recipe, stats);
+      for (const recipe of results) {
+        await processRecipe(admin, taxonomy, recipe, stats);
+      }
     }
-  }
 
-  return NextResponse.json({ ok: true, stats });
+    return NextResponse.json({ ok: true, stats });
+  } catch (error) {
+    console.error("refresh-cache failed", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
 }
