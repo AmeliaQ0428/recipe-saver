@@ -85,6 +85,18 @@ CLIENTS = [
             "emergency health services NZ",
         ],
     },
+    {
+        "name": "Big Four & Accounting Firms",
+        "client_queries": [
+            "Deloitte PwC KPMG EY accounting",
+            "Big Four accounting firm",
+        ],
+        "industry": "Accounting & Professional Services (Global)",
+        "industry_queries": [
+            "accounting firm audit regulation global",
+            "IFRS accounting standards audit",
+        ],
+    },
 ]
 
 
