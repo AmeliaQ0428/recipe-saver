@@ -1,0 +1,30 @@
+name: Daily News Digest
+
+on:
+  schedule:
+    # 7:00 AM NZST (UTC+12, NZ winter). Shifts to 8:00 AM during NZDT (Oct–Apr).
+    - cron: '0 19 * * *'
+  workflow_dispatch:  # lets you trigger a test run manually from the GitHub UI
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run digest
+        run: python tools/daily_digest.py
+        env:
+          GMAIL_FROM: ${{ secrets.GMAIL_FROM }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          DIGEST_TO: ${{ secrets.DIGEST_TO }}
